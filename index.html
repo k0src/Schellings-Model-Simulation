@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schelling's Model of Segregation</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Schelling's Model of Segregation</h1>
+        <span>
+          Agents (Red/Blue) move to a random empty spot if they do not have
+          enough neighbors of their own type.
+        </span>
+      </header>
+
+      <div class="simulation">
+        <canvas id="gridCanvas"></canvas>
+      </div>
+
+      <div class="stats">
+        <span>Rounds: <strong id="roundDisplay">0</strong></span>
+        <span>Satisfied: <strong id="satisfactionDisplay">0%</strong></span>
+      </div>
+
+      <div class="controls">
+        <div class="buttons">
+          <button id="btnStart">Start</button>
+          <button id="btnStop" disabled>Stop</button>
+          <button id="btnStep">Step</button>
+          <button id="btnReset">Reset</button>
+        </div>
+
+        <div class="params">
+          <div class="param-item">
+            <label for="paramT">Threshold (t):</label>
+            <input type="number" id="paramT" value="4" min="0" max="8" />
+            <small>Min similar neighbors needed</small>
+          </div>
+
+          <div class="param-item">
+            <label for="paramMaxRounds">Max Rounds:</label>
+            <input type="number" id="paramMaxRounds" value="0" min="0" />
+            <small>0 for infinite</small>
+          </div>
+
+          <div class="param-item">
+            <label for="paramSize"
+              >Grid Size (N x N): <span id="valSize">50</span></label
+            >
+            <input type="range" id="paramSize" min="10" max="150" value="50" />
+          </div>
+
+          <div class="param-item">
+            <label for="paramRatio"
+              >Type Ratio (Red/Blue): <span id="valRatio">50/50</span></label
+            >
+            <input type="range" id="paramRatio" min="10" max="90" value="50" />
+          </div>
+
+          <div class="param-item">
+            <label for="paramEmpty"
+              >Empty Cells (%): <span id="valEmpty">10%</span></label
+            >
+            <input type="range" id="paramEmpty" min="1" max="50" value="10" />
+          </div>
+
+          <div class="param-item">
+            <label for="paramSpeed">Speed:</label>
+            <input
+              type="range"
+              id="paramSpeed"
+              min="0"
+              max="1000"
+              value="950"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
