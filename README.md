@@ -19,4 +19,6 @@ To try to fix the problem of "floating" agents, where major clusters form, but a
 - If that doesn't exist, they move to an empty spot with the highest number of neighbors of the same type, instead of floating around randomly.
 - Otherwise, they move to a random empty spot.
 
+---
+
 Run the simulation [here](https://k0src.github.io/Schellings-Model-Simulation/) or clone this repository and open `index.html` in a web browser.
