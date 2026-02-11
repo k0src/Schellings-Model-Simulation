@@ -18,7 +18,6 @@ let satisfiedPercent = 0;
 
 let consecutiveIdenticalRounds = 0;
 const STOP_AFTER_ROUNDS = 20;
-const STOP_THRESHOLD = 98;
 
 // DOM
 const canvas = document.getElementById("gridCanvas");
@@ -28,12 +27,13 @@ const inputT = document.getElementById("paramT");
 const inputSize = document.getElementById("paramSize");
 const inputRatio = document.getElementById("paramRatio");
 const inputEmpty = document.getElementById("paramEmpty");
-const inputMaxRounds = document.getElementById("paramMaxRounds");
+const inputStopThreshold = document.getElementById("paramStopThreshold");
 const inputSpeed = document.getElementById("paramSpeed");
 
 const valSize = document.getElementById("valSize");
 const valRatio = document.getElementById("valRatio");
 const valEmpty = document.getElementById("valEmpty");
+const valStopThreshold = document.getElementById("valStopThreshold");
 const dispRound = document.getElementById("roundDisplay");
 const dispSat = document.getElementById("satisfactionDisplay");
 
@@ -50,6 +50,7 @@ function init() {
   inputSize.addEventListener("input", updateLabels);
   inputRatio.addEventListener("input", updateLabels);
   inputEmpty.addEventListener("input", updateLabels);
+  inputStopThreshold.addEventListener("input", updateLabels);
 
   btnStart.addEventListener("click", startSimulation);
 
@@ -76,6 +77,7 @@ function updateLabels() {
   valSize.textContent = inputSize.value;
   valRatio.textContent = `${inputRatio.value}/${100 - inputRatio.value}`;
   valEmpty.textContent = `${inputEmpty.value}%`;
+  valStopThreshold.textContent = `${inputStopThreshold.value}%`;
 }
 
 function resetSimulation() {
@@ -142,12 +144,6 @@ function stopSimulation(finished = false) {
 function loop() {
   if (!isRunning) return;
 
-  const maxRounds = parseInt(inputMaxRounds.value);
-  if (maxRounds > 0 && currentRound >= maxRounds) {
-    stopSimulation(false);
-    return;
-  }
-
   const result = step();
 
   // All agents satisfied
@@ -165,8 +161,9 @@ function loop() {
 
   // Check if satisfaction is above certain threshold for a few rounds
   const currentSatisfaction = parseFloat(satisfiedPercent);
+  const stopThresh = parseFloat(inputStopThreshold.value);
 
-  if (currentSatisfaction > STOP_THRESHOLD) {
+  if (currentSatisfaction >= stopThresh) {
     consecutiveIdenticalRounds++;
   } else {
     consecutiveIdenticalRounds = 0;
