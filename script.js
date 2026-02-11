@@ -30,6 +30,7 @@ const inputEmpty = document.getElementById("paramEmpty");
 const inputStopThreshold = document.getElementById("paramStopThreshold");
 const inputSpeed = document.getElementById("paramSpeed");
 
+const valT = document.getElementById("valT");
 const valSize = document.getElementById("valSize");
 const valRatio = document.getElementById("valRatio");
 const valEmpty = document.getElementById("valEmpty");
@@ -47,6 +48,7 @@ function init() {
   canvas.width = 500;
   canvas.height = 500;
 
+  inputT.addEventListener("input", updateLabels);
   inputSize.addEventListener("input", updateLabels);
   inputRatio.addEventListener("input", updateLabels);
   inputEmpty.addEventListener("input", updateLabels);
@@ -74,6 +76,7 @@ function init() {
 }
 
 function updateLabels() {
+  valT.textContent = `${inputT.value}%`;
   valSize.textContent = inputSize.value;
   valRatio.textContent = `${inputRatio.value}/${100 - inputRatio.value}`;
   valEmpty.textContent = `${inputEmpty.value}%`;
@@ -186,7 +189,7 @@ function loop() {
 function step() {
   currentRound++;
 
-  const t = parseInt(inputT.value);
+  const thresholdPercent = parseInt(inputT.value);
   let unsatisfiedAgents = [];
   let emptySpots = [];
 
@@ -197,7 +200,7 @@ function step() {
       if (agent === EMPTY) {
         emptySpots.push({ x, y });
       } else {
-        if (!isSatisfied(x, y, agent, t)) {
+        if (!isSatisfied(x, y, agent, thresholdPercent)) {
           unsatisfiedAgents.push({ x, y, type: agent });
         }
       }
@@ -221,8 +224,8 @@ function step() {
     const agentObj = unsatisfiedAgents[i];
 
     let satisfactorySpots = [];
-    let bestSpot = null; // The spot with the most neighbors even if < t
-    let maxNeighbors = -1;
+    let bestSpot = null;
+    let maxRatio = -1;
 
     for (let j = 0; j < emptySpots.length; j++) {
       const spot = emptySpots[j];
@@ -230,8 +233,13 @@ function step() {
       grid[spot.y][spot.x] = agentObj.type;
 
       // Count neighbors
-      const neighborCount = countNeighbors(spot.x, spot.y, agentObj.type);
-      const isHappy = neighborCount >= t;
+      const stats = getNeighborStats(spot.x, spot.y, agentObj.type);
+
+      // Calculate ratio
+      const ratio = stats.total === 0 ? 1 : stats.same / stats.total;
+
+      // Check threshold
+      const isHappy = ratio * 100 >= thresholdPercent;
 
       // Set back to empty
       grid[spot.y][spot.x] = EMPTY;
@@ -241,10 +249,10 @@ function step() {
       }
 
       // Best possible spot
-      if (neighborCount > maxNeighbors) {
-        maxNeighbors = neighborCount;
+      if (ratio > maxRatio) {
+        maxRatio = ratio;
         bestSpot = j;
-      } else if (neighborCount === maxNeighbors) {
+      } else if (ratio === maxRatio) {
         // Randomly pick if tie
         if (Math.random() < 0.5) bestSpot = j;
       }
@@ -256,8 +264,8 @@ function step() {
       // Pick a random spot that makes agent happy
       const rand = Math.floor(Math.random() * satisfactorySpots.length);
       targetIndex = satisfactorySpots[rand];
-    } else if (bestSpot !== -1 && maxNeighbors > 0) {
-      // Go to the spot with most of same type
+    } else if (bestSpot !== -1 && maxRatio >= 0) {
+      // Go to the spot with best ratio
       targetIndex = bestSpot;
     } else {
       // Go to random spot
@@ -289,8 +297,10 @@ function step() {
   };
 }
 
-function countNeighbors(x, y, type) {
-  let count = 0;
+// Returns { same, total }
+function getNeighborStats(x, y, type) {
+  let same = 0;
+  let total = 0;
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       if (dx === 0 && dy === 0) continue;
@@ -298,49 +308,38 @@ function countNeighbors(x, y, type) {
       const ny = y + dy;
       if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize) {
         const neighbor = grid[ny][nx];
-        if (neighbor !== EMPTY && neighbor === type) {
-          count++;
+        if (neighbor !== EMPTY) {
+          total++;
+          if (neighbor === type) {
+            same++;
+          }
         }
       }
     }
   }
-  return count;
+  return { same, total };
 }
 
-// Checks if agent at is satisfied
-// Above, left, right, below, or diagonal
-function isSatisfied(x, y, type, threshold) {
-  let sameCount = 0;
+// Checks if agent is satisfied
+function isSatisfied(x, y, type, thresholdPercent) {
+  const stats = getNeighborStats(x, y, type);
+  if (stats.total === 0) return true;
 
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue;
-
-      const nx = x + dx;
-      const ny = y + dy;
-
-      if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize) {
-        const neighbor = grid[ny][nx];
-        if (neighbor !== EMPTY && neighbor === type) {
-          sameCount++;
-        }
-      }
-    }
-  }
-  return sameCount >= threshold;
+  const ratio = (stats.same / stats.total) * 100;
+  return ratio >= thresholdPercent;
 }
 
 function calculateStats() {
   let totalAgents = 0;
   let satisfiedAgents = 0;
-  const t = parseInt(inputT.value);
+  const thresholdPercent = parseInt(inputT.value);
 
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       const agent = grid[y][x];
       if (agent !== EMPTY) {
         totalAgents++;
-        if (isSatisfied(x, y, agent, t)) {
+        if (isSatisfied(x, y, agent, thresholdPercent)) {
           satisfiedAgents++;
         }
       }
