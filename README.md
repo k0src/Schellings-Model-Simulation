@@ -9,4 +9,4 @@ This is a simulation of [Schelling's Model of Segregation](https://www.stat.berk
 - The simulation continues until all agents are satisfied.
 - The result is a pattern of segregation, where agents of the same kind cluster together.
 
-Run the simulation by cloning this repository and opening `index.html` in a web browser, or go to .
+Run the simulation [here](https://k0src.github.io/Schellings-Model-Simulation/) or clone this repository and open `index.html` in a web browser.
