@@ -16,9 +16,9 @@ let simulationTimeoutId;
 let currentRound = 0;
 let satisfiedPercent = 0;
 
-let lastSatisfactionRate = -1;
 let consecutiveIdenticalRounds = 0;
 const STOP_AFTER_ROUNDS = 20;
+const STOP_THRESHOLD = 98;
 
 // DOM
 const canvas = document.getElementById("gridCanvas");
@@ -85,7 +85,6 @@ function resetSimulation() {
   btnStep.disabled = false;
 
   currentRound = 0;
-  lastSatisfactionRate = -1;
   consecutiveIdenticalRounds = 0;
   gridSize = parseInt(inputSize.value);
 
@@ -131,6 +130,7 @@ function stopSimulation(finished = false) {
   inputSize.disabled = false;
 
   if (finished) {
+    // Finished
     btnStart.disabled = true;
     btnStep.disabled = true;
   } else {
@@ -163,23 +163,22 @@ function loop() {
     return;
   }
 
-  // Check if satisfaction rate is above 90% for a few rounds
-  if (parseFloat(satisfiedPercent) > 90) {
-    if (satisfiedPercent === lastSatisfactionRate) {
-      consecutiveIdenticalRounds++;
-    } else {
-      consecutiveIdenticalRounds = 0;
-    }
+  // Check if satisfaction is above certain threshold for a few rounds
+  const currentSatisfaction = parseFloat(satisfiedPercent);
 
-    if (consecutiveIdenticalRounds >= STOP_AFTER_ROUNDS) {
-      stopSimulation(true);
-      return;
-    }
+  if (currentSatisfaction > STOP_THRESHOLD) {
+    consecutiveIdenticalRounds++;
+  } else {
+    consecutiveIdenticalRounds = 0;
   }
-  lastSatisfactionRate = satisfiedPercent;
+
+  if (consecutiveIdenticalRounds >= STOP_AFTER_ROUNDS) {
+    stopSimulation(true);
+    return;
+  }
 
   // Speed
-  const speedVal = parseInt(inputSpeed.value);
+  const speedVal = parseInt(inputSpeed.value, 10);
   const delay = Math.max(0, 1000 - speedVal);
 
   simulationTimeoutId = setTimeout(loop, delay);
@@ -194,7 +193,7 @@ function step() {
   let unsatisfiedAgents = [];
   let emptySpots = [];
 
-  // Search grid to find unsatisfied agents and empty spots
+  // Look at each cell to see if agents are satisfied and track empty spots
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       const agent = grid[y][x];
@@ -208,7 +207,7 @@ function step() {
     }
   }
 
-  // If everyone is happy, stop
+  // Stop if all happy
   if (unsatisfiedAgents.length === 0) {
     calculateStats();
     draw();
@@ -220,46 +219,63 @@ function step() {
 
   let movedCount = 0;
 
-  // Move agents
+  // Look for the best spot for each unsatisfied agent
   for (let i = 0; i < unsatisfiedAgents.length; i++) {
     const agentObj = unsatisfiedAgents[i];
 
-    // Try to find a SATISFACTORY spot starting at random index
-    const startIndex = Math.floor(Math.random() * emptySpots.length);
-    let foundSpotIndex = -1;
+    let satisfactorySpots = [];
+    let bestSpot = null; // The spot with the most neighbors even if < t
+    let maxNeighbors = -1;
 
     for (let j = 0; j < emptySpots.length; j++) {
-      const idx = (startIndex + j) % emptySpots.length;
-      const spot = emptySpots[idx];
+      const spot = emptySpots[j];
 
-      // Check satisfaction
       grid[spot.y][spot.x] = agentObj.type;
-      const isHappy = isSatisfied(spot.x, spot.y, agentObj.type, t);
-      grid[spot.y][spot.x] = EMPTY; // Reset to empty
+
+      // Count neighbors
+      const neighborCount = countNeighbors(spot.x, spot.y, agentObj.type);
+      const isHappy = neighborCount >= t;
+
+      // Set back to empty
+      grid[spot.y][spot.x] = EMPTY;
 
       if (isHappy) {
-        foundSpotIndex = idx;
-        break;
+        satisfactorySpots.push(j);
+      }
+
+      // Best possible spot
+      if (neighborCount > maxNeighbors) {
+        maxNeighbors = neighborCount;
+        bestSpot = j;
+      } else if (neighborCount === maxNeighbors) {
+        // Randomly pick if tie
+        if (Math.random() < 0.5) bestSpot = j;
       }
     }
 
-    // If no satisfactory spot, move to random empty spot
-    if (foundSpotIndex === -1 && emptySpots.length > 0) {
-      foundSpotIndex = Math.floor(Math.random() * emptySpots.length);
+    let targetIndex = -1;
+
+    if (satisfactorySpots.length > 0) {
+      // Pick a random spot that makes agent happy
+      const rand = Math.floor(Math.random() * satisfactorySpots.length);
+      targetIndex = satisfactorySpots[rand];
+    } else if (bestSpot !== -1 && maxNeighbors > 0) {
+      // Go to the spot with most of same type
+      targetIndex = bestSpot;
+    } else {
+      // Go to random spot
+      targetIndex = Math.floor(Math.random() * emptySpots.length);
     }
 
     // Move
-    if (foundSpotIndex !== -1) {
-      const spot = emptySpots[foundSpotIndex];
+    if (targetIndex !== -1) {
+      const spot = emptySpots[targetIndex];
 
       // Update grid
       grid[agentObj.y][agentObj.x] = EMPTY;
       grid[spot.y][spot.x] = agentObj.type;
 
-      // Update empty list
-      emptySpots.splice(foundSpotIndex, 1);
-
-      // Add the spot that agent left as empty
+      emptySpots.splice(targetIndex, 1);
       emptySpots.push({ x: agentObj.x, y: agentObj.y });
 
       movedCount++;
@@ -274,6 +290,24 @@ function step() {
     moved: movedCount,
     unsatisfied: unsatisfiedAgents.length,
   };
+}
+
+function countNeighbors(x, y, type) {
+  let count = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize) {
+        const neighbor = grid[ny][nx];
+        if (neighbor !== EMPTY && neighbor === type) {
+          count++;
+        }
+      }
+    }
+  }
+  return count;
 }
 
 // Checks if agent at is satisfied
