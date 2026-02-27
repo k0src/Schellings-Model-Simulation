@@ -25,4 +25,7 @@ To try to fix the problem of "floating" agents, where major clusters form, but a
 
 ---
 
-Run the simulation [here](https://k0src.github.io/Schellings-Model-Simulation/) or clone this repository and open `index.html` in a web browser.
+Run the simulation in the browser [here](https://k0src.github.io/Schellings-Model-Simulation/), or clone this repository and run the Rust version (the JS version will crash if the grid is too large, but the Rust version can handle larger grids):
+
+1. Download [Rust](https://rust-lang.org/tools/install/)
+2. Run `cargo run --release` in the `rust` folder (make sure you include the `--release` flag, so Rust will optimize the program).
